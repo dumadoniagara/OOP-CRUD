@@ -12,7 +12,7 @@ const rl = readline.createInterface({
 class Home {
     constructor() {
         this.option = ['Mahasiswa', 'Jurusan', 'Dosen', 'Matakuliah', 'Kontrak', 'Keluar'];
-        this.subOption = ['Mahasiswa', 'Jurusan', 'Dosen', 'Mata Kuliah'];
+        this.subOption = ['Mahasiswa', 'Jurusan', 'Dosen', 'Mata Kuliah', 'Kontrak'];
         this.list = ['daftar', 'cari', 'tambah', 'hapus'];
     }
 
@@ -235,7 +235,7 @@ class Dosen {
                     console.log(`NIP            :${row.nip}`);
                     console.log(`Nama Dosen     :${row.nama}`);
                 } else {
-                    console.log(`Dosen dengan nomor NIP ${kode_jurusan}" tidak terdaftar`);
+                    console.log(`Dosen dengan nomor NIP ${nip}" tidak terdaftar`);
                 }
                 hm.subOpsi(2);
                 rl.prompt();
@@ -275,19 +275,209 @@ class Dosen {
     }
 }
 
+class Matakuliah {
+    constructor() {
+        this.db = new sqlite3.Database('./test.db', sqlite3.OPEN_READWRITE);
+    }
+    list() {
+        this.db.serialize(() => {
+            let sql = "SELECT * FROM matakuliah";
+            this.db.all(sql, (err, rows) => {
+                if (err) {
+                    throw err;
+                } else { //cetak isi rows
+                    let table = new Table({
+                        head: ['Kode', 'Nama MataKuliah', 'SKS'],
+                        colWidths: [10, 20, 5]
+                    });
+                    // console.log(rows);
+                    rows.forEach((row) => {
+                        table.push([row.kode_mk, row.nama_mk, row.sks]);
+                    });
+                    console.log(table.toString());
+                    // console.log(`====================================================`);
+                    hm.subOpsi(3);
+                    rl.prompt();
+                }
+            });
+        });
+    }
+    search() {
+        rl.question(`Masukan Kode Matakuliah yang anda cari, Kode : `, (kode) => {
+            let sql = `SELECT * FROM matakuliah WHERE kode_mk = ?`;
+            this.db.get(sql, [kode], (err, row) => {
+                if (err) throw err;
+                if (row) {
+                    console.log(`Kode MK     :${row.kode_mk}`);
+                    console.log(`Nama MK     :${row.nama_mk}`);
+                    console.log(`SKS         :${row.sks}`);
+                } else {
+                    console.log(`Matakuliah dengan kode ${kode}" tidak terdaftar`);
+                }
+                hm.subOpsi(3);
+                rl.prompt();
+            });
+        });
+    }
+
+    add() {
+        console.log("Lengkapi data Matakuliah di bawah ini: ");
+        rl.question("Kode : ", (kode) => {
+            rl.question("Nama MK  : ", (nama) => {
+                rl.question("SKS  : ", (sks) => {
+                    this.db.serialize(() => {
+                        let sql = `INSERT INTO matakuliah (kode_mk, nama_mk, sks) VALUES ("${kode}", "${nama}", "${sks}")`;
+                        this.db.run(sql, (err) => {
+                            if (err) throw err;
+                            mk.list();
+                            hm.subOpsi(3);
+                            rl.prompt();
+                        });
+                    });
+                });
+            });
+        });
+    }
+
+    delete() {
+        rl.question((`masukan kode matakuliah yang akan dihapus: `), (kode) => {
+            this.db.run(`DELETE FROM matakuliah WHERE kode_mk = '${kode}'`, (err) => {
+                if (err) {
+                    return console.error(err.message);
+                }
+                console.log(`Matakuliah dengan kode ${kode} telah dihapus`);
+                mk.list();
+                hm.subOpsi(3);
+                rl.prompt();
+            })
+        })
+    }
+}
+
+class Kontrak {
+    constructor() {
+        this.db = new sqlite3.Database('./test.db', sqlite3.OPEN_READWRITE);
+    }
+    list() {
+        this.db.serialize(() => {
+            let sql = "SELECT * FROM perkuliahan";
+            this.db.all(sql, (err, rows) => {
+                if (err) {
+                    throw err;
+                } else { //cetak isi rows
+                    let table = new Table({
+                        head: ['nim', 'nip dosen', 'mata kuliah', 'nilai'],
+                        colWidths: [10, 5, 10, 10]
+                    });
+                    // console.log(rows);
+                    rows.forEach((row) => {
+                        table.push([row.nim, row.nip, row.mata_kuliah, row.nilai]);
+                    });
+                    console.log(table.toString());
+                    // console.log(`====================================================`);
+                    hm.subOpsi(4);
+                    rl.prompt();
+                }
+            });
+        });
+    }
+
+    search() {
+        rl.question(`Masukan matakuliah yang ingin anda cari di Kontrak Perkuliahan, Kode : `, (kode) => {
+            rl.question(`Masukan nim mahasiswa pada Kontrak kuliah ${kode}, NIM : `, (nim) => {
+                let sql = `SELECT * FROM perkuliahan WHERE mata_kuliah = ? AND nim = ?`;
+                this.db.get(sql, [kode, nim], (err, row) => {
+                    if (err) throw err;
+                    if (row) {
+                        console.log(`Nim Mahasiswa     :${row.nim}`);
+                        console.log(`Nip Dosen         :${row.nip}`);
+                        console.log(`Nama MK           :${row.mata_kuliah}`);
+                        console.log(`Nilai             :${row.nilai}`);
+                    } else {
+                        console.log(`Matakuliah dengan kode ${kode}" tidak terdaftar`);
+                    }
+                    hm.subOpsi(4);
+                    rl.prompt();
+                });
+            });
+        });
+    }
+
+    add() {
+        console.log("Lengkapi data Kontrak perkuliahan di bawah ini: ");
+        rl.question("Nim Mahasiswa        : ", (nim) => {
+            rl.question("NIP dosen        : ", (nip) => {
+                rl.question("kode MK      : ", (mata_kuliah) => {
+                    rl.question("Nilai    : ", (nilai) => {
+                        this.db.serialize(() => {
+                            let sql = `INSERT INTO perkuliahan (nim, nip, mata_kuliah, nilai) VALUES ("${nim}", "${nip}", "${mata_kuliah}","${nilai}")`;
+                            this.db.run(sql, (err) => {
+                                if (err) throw err;
+                                kt.list();
+                                hm.subOpsi(4);
+                                rl.prompt();
+                            });
+                        });
+                    });
+                });
+            });
+        });
+    }
+
+    delete() {
+        rl.question((`masukan kode matakuliah yang akan dihapus: `), (kode) => {
+            rl.question((`masukan nim yang ingin dihapus pada kontrak matakuliah ${kode} : `), (nim) => {
+                this.db.run(`DELETE FROM perkuliahan WHERE nim = '${nim}' AND mata_kuliah = '${kode}'`, (err) => {
+                    if (err) {
+                        return console.error(err.message);
+                    }
+                    console.log(`Kontrak perkuliahan pada matakuliah ${kode} milik nim ${nim} telah dihapus`);
+                    kt.list();
+                    hm.subOpsi(4);
+                    rl.prompt();
+                })
+            });
+        });
+    }
+}
+
+function login() {
+    console.log(`====================================================`);
+    console.log(`Welcome to Institut Teknologi Bandung`);
+    console.log(`Jl. Ganeca no. 10, Bandung`);
+    console.log(`====================================================`);
+    rl.question('Username : ', (input) => {
+        console.log(`====================================================`);
+        rl.question('Password : ', (pass) => {
+            console.log(`====================================================`);
+            mh.db.serialize(() => {
+                let sql = `SELECT * FROM pengguna WHERE username = ? AND password = ?`;
+                mh.db.get(sql, [input, pass], (err, row) => {
+                    if (err) throw err;
+                    if (row) {
+                        console.log(`Welcome ${row.username}. Your acces level is : ${row.status}`);
+                        console.log(`====================================================`);
+                        run();
+                    }
+                    else {
+                        console.log(`username atau password belum terdaftar!`);
+                        login();
+                    }
+                })
+            });
+        });
+    });
+};
+
 let mh = new Mahasiswa();
 let hm = new Home();
 let jr = new Jurusan();
 let ds = new Dosen();
-
-console.log(`====================================================`);
-console.log(`Welcome to Institut Teknologi Bandung`);
-console.log(`Jl. Ganeca no. 10, Bandung`);
-console.log(`====================================================`);
-
-hm.opsi();
+let mk = new Matakuliah();
+let kt = new Kontrak();
 
 function run() {
+    hm.opsi();
     rl.question('masukkan salah satu no. dari opsi diatas : ', (num) => {
         switch (num) {
             case '1': //mahasiswa
@@ -347,7 +537,7 @@ function run() {
                 });
                 break;
 
-                case '3': //Dosen
+            case '3': //Dosen
                 hm.subOpsi(2);
                 rl.prompt();
                 rl.on('line', (num) => {
@@ -375,6 +565,69 @@ function run() {
                     }
                 });
                 break;
+
+            case '4': //Dosen
+                hm.subOpsi(3);
+                rl.prompt();
+                rl.on('line', (num) => {
+                    switch (num) {
+                        case '1':
+                            mk.list();
+                            break;
+                        case '2':
+                            mk.search();
+                            break;
+                        case '3':
+                            mk.add();
+                            break;
+                        case '4':
+                            mk.delete();
+                            break;
+                        case '5':
+                            hm.opsi();
+                            run();
+                            break;
+                        default:
+                            console.log(`pilihan yang anda masukan salah`);
+                            hm.subOpsi(3);
+                            break;
+                    }
+                });
+                break;
+
+            case '5': //Kontrak
+                hm.subOpsi(4);
+                rl.prompt();
+                rl.on('line', (num) => {
+                    switch (num) {
+                        case '1':
+                            kt.list();
+                            break;
+                        case '2':
+                            kt.search();
+                            break;
+                        case '3':
+                            kt.add();
+                            break;
+                        case '4':
+                            kt.delete();
+                            break;
+                        case '5':
+                            hm.opsi();
+                            run();
+                            break;
+                        default:
+                            console.log(`pilihan yang anda masukan salah`);
+                            hm.subOpsi(4);
+                            break;
+                    }
+                });
+                break;
+
+            case '6':
+                console.log(`Anda telah logout`)
+                login();
+                break;
             default:
                 console.log(`Pilihan yang anda masukan salah.`)
                 break;
@@ -382,7 +635,4 @@ function run() {
     });
 }
 
-run();
-
-
-
+login();
