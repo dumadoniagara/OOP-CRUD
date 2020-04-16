@@ -1,4 +1,5 @@
-// Fungsi OPSI dan SUB-OPSI
+// file database yang digunakan : test.db
+
 const sqlite3 = require('sqlite3').verbose();
 const Table = require('cli-table');
 const readline = require('readline');
